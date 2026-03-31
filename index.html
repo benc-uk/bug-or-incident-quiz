@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bug or Incident?</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --bug-color: #d2a8ff;
+      --incident-color: #f78166;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    .key {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+    }
+
+    .key-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .key-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .key-dot.bug { background: var(--bug-color); }
+    .key-dot.incident { background: var(--incident-color); }
+
+    .key-label { color: var(--muted); }
+
+    .progress-bar {
+      background: var(--border);
+      border-radius: 8px;
+      height: 8px;
+      margin-bottom: 2rem;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      background: var(--accent);
+      height: 100%;
+      border-radius: 8px;
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+
+    .progress-text {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .question-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+
+    .question-card.active { display: block; }
+
+    .scenario-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.8rem;
+    }
+
+    .scenario-text {
+      font-size: 1.1rem;
+      line-height: 1.65;
+      margin-bottom: 1.8rem;
+      padding: 1.2rem 1.4rem;
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+      border-left: 3px solid var(--border);
+    }
+
+    .prompt {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--accent);
+    }
+
+    .options {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .option-btn {
+      flex: 1;
+      padding: 1rem 1.5rem;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text);
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .option-btn:hover:not(:disabled) {
+      border-color: var(--accent);
+      background: rgba(88, 166, 255, 0.08);
+    }
+
+    .option-btn:disabled { cursor: default; opacity: 0.5; }
+
+    .option-btn.correct {
+      border-color: var(--green);
+      background: rgba(63, 185, 80, 0.12);
+      opacity: 1;
+    }
+
+    .option-btn.incorrect {
+      border-color: var(--red);
+      background: rgba(248, 81, 73, 0.1);
+      opacity: 1;
+    }
+
+    .explanation {
+      display: none;
+      padding: 1.1rem 1.3rem;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .explanation.show { display: block; }
+    .explanation strong { color: var(--text); }
+
+    .explanation.bug-exp {
+      background: rgba(210, 168, 255, 0.06);
+      border-left: 3px solid var(--bug-color);
+    }
+
+    .explanation.incident-exp {
+      background: rgba(247, 129, 102, 0.06);
+      border-left: 3px solid var(--incident-color);
+    }
+
+    .nav-btn {
+      display: inline-block;
+      padding: 0.7rem 1.8rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      float: right;
+    }
+
+    .nav-btn:hover { opacity: 0.85; }
+    .nav-btn:disabled { opacity: 0.4; cursor: default; }
+
+    /* Results */
+    .results {
+      display: none;
+      text-align: center;
+    }
+
+    .results.active { display: block; }
+
+    .score-circle {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      border: 6px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 2rem auto;
+    }
+
+    .score-circle.high { border-color: var(--green); }
+    .score-circle.mid { border-color: var(--yellow); }
+    .score-circle.low { border-color: var(--red); }
+
+    .score-number {
+      font-size: 2.8rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .score-circle.high .score-number { color: var(--green); }
+    .score-circle.mid .score-number { color: var(--yellow); }
+    .score-circle.low .score-number { color: var(--red); }
+
+    .score-label { font-size: 0.85rem; color: var(--muted); margin-top: 0.2rem; }
+
+    .results h2 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .results .summary { color: var(--muted); margin-bottom: 2rem; font-size: 1rem; }
+
+    .results-breakdown {
+      text-align: left;
+      margin: 2rem 0;
+    }
+
+    .result-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.8rem;
+      padding: 0.9rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+
+    .result-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 0.15rem; }
+
+    .result-answer {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      margin-left: 0.3rem;
+      vertical-align: middle;
+    }
+
+    .result-answer.bug { background: rgba(210,168,255,0.2); color: var(--bug-color); }
+    .result-answer.incident { background: rgba(247,129,102,0.2); color: var(--incident-color); }
+
+    .restart-btn {
+      padding: 0.8rem 2rem;
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--accent);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 1rem;
+    }
+
+    .restart-btn:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .clearfix::after { content: ""; display: table; clear: both; }
+
+    @media (max-width: 500px) {
+      .options { flex-direction: column; gap: 0.7rem; }
+      .container { padding: 1.2rem 1rem; }
+      .key { gap: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🐛 Bug or Incident? 🔥</h1>
+      <p>You'll be given 10 realistic scenarios. For each one, decide whether it describes a <strong>bug</strong> (a software defect) or a <strong>live incident</strong> (production impact requiring immediate response).</p>
+      <div class="key">
+        <div class="key-item"><span class="key-dot bug"></span> <span class="key-label">Bug: a defect in the software, found during development or testing, or latent in production but not yet causing impact</span></div>
+      </div>
+      <div class="key" style="margin-top: 0.4rem;">
+        <div class="key-item"><span class="key-dot incident"></span> <span class="key-label">Incident: a live production issue actively affecting users or the service right now</span></div>
+      </div>
+    </header>
+
+    <div id="quiz-area">
+      <div class="progress-text" id="progress-text">Scenario 1 of 10</div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <div id="questions-container"></div>
+    </div>
+
+    <div class="results" id="results">
+      <h2 id="results-title"></h2>
+      <div class="score-circle" id="score-circle">
+        <div class="score-number" id="score-number"></div>
+        <div class="score-label">correct</div>
+      </div>
+      <p class="summary" id="results-summary"></p>
+      <div class="results-breakdown" id="results-breakdown"></div>
+      <br>
+      <button class="restart-btn" onclick="restart()">Try Again</button>
+    </div>
+  </div>
+
+  <script>
+    const questions = [
+      {
+        scenario: "A developer runs the integration test suite and notices that the file upload endpoint returns a 500 error when the filename contains special characters like parentheses or square brackets. The issue is reproducible locally and in CI. No customers have reported it, and the problematic filenames haven't appeared in production logs.",
+        answer: "bug",
+        explanation: "This is a <strong>bug</strong>. It's a defect in input handling that was caught during testing. It's not affecting production users, so there's no live impact. The correct action is to log it as a work item, assess severity, and schedule a fix."
+      },
+      {
+        scenario: "At 03:15 on a Tuesday morning, the on-call engineer receives a page. Monitoring dashboards show that the API gateway is returning 503 errors to all inbound requests. Customer-facing operations have stopped entirely. The pod logs show repeated 'connection refused' errors when attempting to reach the backend database.",
+        answer: "incident",
+        explanation: "This is an <strong>incident</strong>. The service is completely unavailable to all users, dashboards confirm live impact, and the on-call has been paged. This requires immediate incident response: declare the incident, mitigate (e.g. restart pods, check DB connectivity), and communicate status."
+      },
+      {
+        scenario: "During a code review, a reviewer spots that a newly added retry loop has no maximum retry count or backoff delay. Under certain error conditions (e.g. a consistently failing downstream call), this could spin indefinitely and exhaust the thread pool. The code hasn't been merged yet.",
+        answer: "bug",
+        explanation: "This is a <strong>bug</strong> (caught pre-merge). The infinite retry loop is a defect in the code, but it was identified during review before it reached any environment. It should be fixed before the PR is approved. No production impact, no incident."
+      },
+      {
+        scenario: "A Kubernetes cluster's monitoring shows that the memory usage of several pods has been climbing steadily over the past 48 hours. Two pods have already been OOM-killed and restarted. Users are intermittently seeing slow response times, and the support team has received three complaints in the last hour.",
+        answer: "incident",
+        explanation: "This is an <strong>incident</strong>. There is active, ongoing impact to users (slow responses, support complaints), and the system is degrading progressively. The underlying cause may well be a bug (a memory leak), but right now the priority is incident response: mitigate the impact, then investigate the root cause."
+      },
+      {
+        scenario: "While profiling the application's performance in a load test environment, an engineer finds that a particular database query is doing a full table scan instead of using an index. The query takes 12 seconds under load, compared to the expected 200ms. The same query exists in production but hasn't been flagged by users because it only runs during a rarely used batch operation.",
+        answer: "bug",
+        explanation: "This is a <strong>bug</strong>. The missing index is a performance defect discovered during load testing. Although the same code exists in production, there is no current user impact because the query path is rarely triggered. It should be prioritised as a defect, likely with a relatively high severity given the potential for future impact at scale."
+      },
+      {
+        scenario: "At 14:00, the deployment pipeline pushes a new release to production. Within 20 minutes, error rates spike from 0.1% to 35%. The new release introduced a schema change that is incompatible with cached data from the previous version. Active users are seeing corrupted data in the UI.",
+        answer: "incident",
+        explanation: "This is an <strong>incident</strong>. A deployment has caused immediate, measurable production impact (35% error rate, corrupted data visible to users). The team should initiate incident response immediately: consider a rollback, invalidate caches, and communicate with affected users. The schema incompatibility is the underlying bug, but the situation demands incident management."
+      },
+      {
+        scenario: "The TLS certificate for the production API endpoint expired at midnight. Starting at 00:01, all HTTPS connections are being rejected by clients with certificate validation errors. The service is technically running, but no client can establish a secure connection.",
+        answer: "incident",
+        explanation: "This is an <strong>incident</strong>. Even though the application itself is healthy, the expired certificate means no clients can connect. The service is effectively down for all users. This requires immediate action: renew or replace the certificate, restart the ingress/gateway, and set up certificate expiry monitoring to prevent recurrence."
+      },
+      {
+        scenario: "A QA engineer testing the nightly build discovers that the 'export to CSV' feature silently drops any columns containing null values, producing incomplete reports. The defect is present in the staging environment. Production hasn't been updated to this build yet.",
+        answer: "bug",
+        explanation: "This is a <strong>bug</strong>. The defect exists in a staging build that hasn't been promoted to production. There is no customer impact. It should be filed as a defect, prioritised, and fixed before the next production release."
+      },
+      {
+        scenario: "An engineer discovers that when a user updates their profile and changes their email address, the confirmation email is sent to the old address instead of the new one. The code has been in production for three months. Nobody has reported it, and analytics show the feature is used about five times per week.",
+        answer: "bug",
+        explanation: "This is a <strong>bug</strong>. The logic is wrong (sending to the old email), and it's been latent in production for months. However, there is no active service disruption. Users presumably haven't noticed or found it inconvenient enough to report. It should be filed as a defect and prioritised for fix, but there is no live incident to manage."
+      },
+      {
+        scenario: "At 09:30 on Monday morning, the team notices that the message queue consumer has stopped processing messages. The dead-letter queue has accumulated 45,000 unprocessed messages over the weekend. Downstream systems that depend on these messages are showing stale data, and several automated customer reports scheduled for Monday morning were not generated.",
+        answer: "incident",
+        explanation: "This is an <strong>incident</strong>. There is clear production impact: 45,000 messages are unprocessed, downstream systems have stale data, and scheduled reports have failed. Even though the root cause might be a bug (consumer crash, connection issue), the situation is actively affecting the business right now and requires incident response: restore the consumer, drain the DLQ, regenerate the reports, and communicate to stakeholders."
+      }
+    ];
+
+    let currentQuestion = 0;
+    let score = 0;
+    let answers = [];
+
+    function init() {
+      const container = document.getElementById('questions-container');
+      questions.forEach((q, i) => {
+        const card = document.createElement('div');
+        card.className = `question-card ${i === 0 ? 'active' : ''}`;
+        card.id = `q${i}`;
+        card.innerHTML = `
+          <div class="scenario-label">Scenario ${i + 1}</div>
+          <div class="scenario-text">${q.scenario}</div>
+          <div class="prompt">Is this a bug or a live incident?</div>
+          <div class="options">
+            <button class="option-btn" onclick="answer(${i}, 'bug')">🐛 Bug</button>
+            <button class="option-btn" onclick="answer(${i}, 'incident')">🔥 Incident</button>
+          </div>
+          <div class="explanation ${q.answer === 'bug' ? 'bug-exp' : 'incident-exp'}" id="exp${i}">${q.explanation}</div>
+          <div class="clearfix">
+            <button class="nav-btn" id="next${i}" onclick="next(${i})" disabled>
+              ${i < questions.length - 1 ? 'Next Scenario →' : 'See Results'}
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      updateProgress();
+    }
+
+    function answer(qi, userAnswer) {
+      const q = questions[qi];
+      const card = document.getElementById(`q${qi}`);
+      const btns = card.querySelectorAll('.option-btn');
+      const correct = userAnswer === q.answer;
+
+      if (correct) score++;
+      answers[qi] = { correct, userAnswer };
+
+      btns.forEach(btn => {
+        btn.disabled = true;
+        const btnValue = btn.textContent.includes('Bug') ? 'bug' : 'incident';
+        if (btnValue === q.answer) {
+          btn.classList.add('correct');
+        } else if (btnValue === userAnswer && !correct) {
+          btn.classList.add('incorrect');
+        }
+      });
+
+      document.getElementById(`exp${qi}`).classList.add('show');
+      document.getElementById(`next${qi}`).disabled = false;
+    }
+
+    function next(qi) {
+      document.getElementById(`q${qi}`).classList.remove('active');
+      if (qi < questions.length - 1) {
+        currentQuestion = qi + 1;
+        document.getElementById(`q${currentQuestion}`).classList.add('active');
+        updateProgress();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        showResults();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+    function updateProgress() {
+      document.getElementById('progress-text').textContent = `Scenario ${currentQuestion + 1} of ${questions.length}`;
+      document.getElementById('progress-fill').style.width = `${((currentQuestion + 1) / questions.length) * 100}%`;
+    }
+
+    function showResults() {
+      document.getElementById('quiz-area').style.display = 'none';
+      const results = document.getElementById('results');
+      results.classList.add('active');
+
+      const pct = Math.round((score / questions.length) * 100);
+      const circle = document.getElementById('score-circle');
+      circle.className = `score-circle ${pct >= 80 ? 'high' : pct >= 50 ? 'mid' : 'low'}`;
+      document.getElementById('score-number').textContent = `${score}/${questions.length}`;
+
+      const titles = {
+        high: '🏆 Excellent!',
+        mid: '👍 Not bad!',
+        low: '📚 Room to improve'
+      };
+      const summaries = {
+        high: `You scored ${pct}%. You clearly understand the difference between defects and live incidents.`,
+        mid: `You scored ${pct}%. Decent intuition, but review the explanations below. The key distinction is whether there is active production impact right now.`,
+        low: `You scored ${pct}%. The core question is always: "Is this actively affecting users in production right now?" If yes, it's an incident. If not, it's a bug.`
+      };
+      const level = pct >= 80 ? 'high' : pct >= 50 ? 'mid' : 'low';
+
+      document.getElementById('results-title').textContent = titles[level];
+      document.getElementById('results-summary').textContent = summaries[level];
+
+      const breakdown = document.getElementById('results-breakdown');
+      breakdown.innerHTML = questions.map((q, i) => `
+        <div class="result-item">
+          <span class="result-icon">${answers[i]?.correct ? '✅' : '❌'}</span>
+          <span>
+            <strong>Scenario ${i + 1}:</strong> ${q.scenario.substring(0, 90)}...
+            <span class="result-answer ${q.answer}">${q.answer === 'bug' ? '🐛 Bug' : '🔥 Incident'}</span>
+          </span>
+        </div>
+      `).join('');
+    }
+
+    function restart() {
+      currentQuestion = 0;
+      score = 0;
+      answers = [];
+      document.getElementById('quiz-area').style.display = 'block';
+      document.getElementById('results').classList.remove('active');
+      document.getElementById('questions-container').innerHTML = '';
+      init();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    init();
+  </script>
+</body>
+</html>
